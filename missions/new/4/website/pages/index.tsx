@@ -31,6 +31,8 @@ const Home: NextPage = () => {
   const [amountOut, setamountOut] = useState(0);
   const [amountIn, setamountIn] = useState(1);
   const [allowance, setallowance] = useState(0);
+  const [fromtokenBalance, setfromtokenBalance] = useState(0);
+  const [totokenBalance, settotokenBalance] = useState(0);
   const [fromToken, setfromToken] = useState({
     symbol: "USDT",
     logoURI: "https://assets.coingecko.com/coins/images/325/thumb/Tether.png",
@@ -72,11 +74,37 @@ const Home: NextPage = () => {
 
     setallowance(formattedOp);
   };
+  const fetchSelectedTokenBalances = async () => {
+    const fromTokenContract = new web3.eth.Contract(
+      ERC20ABI,
+      fromToken.address
+    );
+    const toTokenContract = new web3.eth.Contract(ERC20ABI, toToken.address);
+
+    const fromTBalance = await fromTokenContract.methods
+      .balanceOf(account)
+      .call();
+    const toTBalance = await toTokenContract.methods.balanceOf(account).call();
+
+    const formatedFTbal = new BigNumber(fromTBalance)
+      .div(10 ** fromToken.decimals)
+      .toFixed(4);
+    setfromtokenBalance(formatedFTbal);
+    const formatedTTbal = new BigNumber(toTBalance)
+      .div(10 ** toToken.decimals)
+      .toFixed(4);
+    settotokenBalance(formatedTTbal);
+  };
   useEffect(() => {
     if (account) {
       fetchAllowance();
     }
   }, [fromToken, account]);
+  useEffect(() => {
+    if (account) {
+      fetchSelectedTokenBalances();
+    }
+  }, [fromToken, account, toToken]);
   useEffect(() => {
     const fromTokenSymbol = fromToken.symbol?.toLocaleLowerCase();
     const toTokenSymbol = toToken.symbol?.toLocaleLowerCase();
@@ -116,6 +144,8 @@ const Home: NextPage = () => {
       console.log("====================================");
       console.log({ txn });
       console.log("====================================");
+      fetchSelectedTokenBalances();
+
       alert("Success");
     } catch (error) {
       alert("Failed");
@@ -165,34 +195,41 @@ const Home: NextPage = () => {
             {account ? formatEthAddress(account) : "Connect Wallet"}
           </button>
           <div className="my-5">
-            <TokenSelectionModal
-              tokenList={DEFAULT_TOKEN_LIST}
-              selectedToken={fromToken}
-              onSelect={setfromToken}
-              secondToken={toToken}
-            />
+            <div className="flex items-center justify-between">
+              <TokenSelectionModal
+                tokenList={DEFAULT_TOKEN_LIST}
+                selectedToken={fromToken}
+                onSelect={setfromToken}
+                secondToken={toToken}
+              />
+              {account && <p>{fromtokenBalance}</p>}
+            </div>
+
             <input
               type="number"
               min={0}
               placeholder="Type here"
-              className="w-full max-w-xs input input-bordered input-info"
+              className="w-full input input-bordered input-info"
               defaultValue={amountIn}
               value={amountIn}
               onChange={(e) => setamountIn(e.target.value)}
             />
           </div>
           <div>
-            <TokenSelectionModal
-              tokenList={DEFAULT_TOKEN_LIST}
-              selectedToken={toToken}
-              onSelect={settoToken}
-              secondToken={fromToken}
-            />
+            <div className="flex items-center justify-between">
+              <TokenSelectionModal
+                tokenList={DEFAULT_TOKEN_LIST}
+                selectedToken={toToken}
+                onSelect={settoToken}
+                secondToken={fromToken}
+              />
+              {account && <p>{totokenBalance}</p>}
+            </div>
             <input
               type="number"
               min={0}
               placeholder="Type here"
-              className="w-full max-w-xs input input-bordered input-info outline outline-info"
+              className="w-full input input-bordered input-info outline outline-info"
               disabled
               value={amountOut}
             />
